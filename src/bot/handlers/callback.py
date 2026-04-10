@@ -164,6 +164,10 @@ async def deactivate_service_on_account(
 
     try:
         await megafon_manager.delete_all_numbers()
+        megafon_manager.account.data.last_activate_datetime = (
+            datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        )
+        await megafon_manager.account.save_account_data_to_db()
     except MegafonAPIError as err:
         return await callback.message.edit_text(
             html.bold(
@@ -183,9 +187,8 @@ async def deactivate_service_on_account(
             + "Это нужно, так как иногда мегафон просто не засчитывает отключения"
         )
     )
-    megafon_manager.account.data.last_activate_datetime = (
-        datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-    )
+
+
     await callback.message.edit_text(
         text=text,
         reply_markup=keyboard.account_actions(callback_data.account_id),
@@ -321,11 +324,6 @@ async def activate_service_on_all_accounts(
     for megafon_manager in megafon_managers:
         try:
             await megafon_manager.activate_numbers()
-
-            megafon_manager.account.data.last_activate_datetime = (
-                datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-            )
-            await megafon_manager.account.save_account_data_to_db()
 
             success_activation_amount += 1
             success_activated_accounts.append(
