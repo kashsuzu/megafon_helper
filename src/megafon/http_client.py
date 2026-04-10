@@ -9,6 +9,7 @@ import asyncio
 from typing import NoReturn
 
 from aiohttp import ClientError, ClientResponse, ClientSession, ClientTimeout
+from config import USE_DELAY
 from loguru import logger
 
 from src.megafon.config import BASE_AUTH_HEADERS, DEFAULT_DELAY
@@ -185,7 +186,8 @@ class MegafonHTTPClient:
         :raises MegafonAPIError: При ошибочных статусах ответа
         :raises NeedCheckSession: При необходимости проверки сессии
         """
-        # await asyncio.sleep(delay) #TODO
+        if USE_DELAY:
+            await asyncio.sleep(delay) 
         timeout = ClientTimeout(total=5)
 
         full_headers = self._prepare_headers(headers, use_strict_headers)
