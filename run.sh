@@ -18,17 +18,19 @@ DATA_DIR="$HOME/megafon_helper_data"
 
 # Проверка и установка скрипта в /usr/local/bin/
 install_to_bin() {
-    print_status "Обновляю megafonHelper в $BIN_PATH..."
+    if ! command -v megafonHelper &> /dev/null; then
+        print_status "Устанавливаю megafonHelper в $BIN_PATH..."
 
-    # Скачиваем скрипт в временный файл
-    local temp_file=$(mktemp)
-    if curl -fsSL "$RAW_REPO_URL/run.sh" -o "$temp_file"; then
-        sudo mv "$temp_file" "$BIN_PATH"
-        sudo chmod +x "$BIN_PATH"
-        print_success "megafonHelper обновлен. Теперь можно запускать: megafonHelper"
-    else
-        print_warning "Не удалось обновить megafonHelper в $BIN_PATH"
-        rm -f "$temp_file"
+        # Скачиваем скрипт в временный файл
+        local temp_file=$(mktemp)
+        if curl -fsSL "$RAW_REPO_URL/megafonHelper" -o "$temp_file"; then
+            sudo mv "$temp_file" "$BIN_PATH"
+            sudo chmod +x "$BIN_PATH"
+            print_success "megafonHelper установлен. Теперь можно запускать: megafonHelper"
+        else
+            print_warning "Не удалось установить megafonHelper в $BIN_PATH"
+            rm -f "$temp_file"
+        fi
     fi
 }
 
