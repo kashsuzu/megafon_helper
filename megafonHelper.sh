@@ -14,7 +14,10 @@ ensure_repo() {
         echo "📥 Скачиваю репозиторий в $SRC_DIR..."
         git clone "$REPO_URL" "$SRC_DIR"
     else
-        echo "✅ Репозиторий найден в $SRC_DIR"
+        echo "🔄 Обновляю исходники в $SRC_DIR..."
+        cd "$SRC_DIR"
+        git pull origin master
+        cd - > /dev/null
     fi
 }
 
