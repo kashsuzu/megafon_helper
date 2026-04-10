@@ -23,7 +23,7 @@ install_to_bin() {
 
         # Скачиваем скрипт в временный файл
         local temp_file=$(mktemp)
-        if curl -fsSL "$RAW_REPO_URL/megafonHelper" -o "$temp_file"; then
+        if curl -fsSL "$RAW_REPO_URL/megafonHelper.sh" -o "$temp_file"; then
             sudo mv "$temp_file" "$BIN_PATH"
             sudo chmod +x "$BIN_PATH"
             print_success "megafonHelper установлен. Теперь можно запускать: megafonHelper"
