@@ -304,6 +304,21 @@ display_container_status() {
     echo ""
 }
 
+# Просмотр логов контейнера
+view_logs() {
+    set +e
+    check_container_status
+    local status=$?
+    set -e
+
+    if [ $status -eq 0 ]; then
+        print_status "Просмотр логов контейнера (Ctrl+C для выхода)..."
+        docker logs -f "$CONTAINER_NAME"
+    else
+        print_warning "Контейнер не запущен"
+    fi
+}
+
 # Меню выбора действий
 show_action_menu() {
     echo "Выберите действие:"
@@ -311,9 +326,10 @@ show_action_menu() {
     echo "2. Собрать из исходников и запустить"
     echo "3. Запустить существующий контейнер"
     echo "4. Остановить и удалить контейнер"
-    echo "5. Выход"
+    echo "5. Просмотр логов"
+    echo "6. Выход"
     echo ""
-    read -p "Введите номер действия (1-5): " action_choice
+    read -p "Введите номер действия (1-6): " action_choice
 }
 
 # Запуск контейнера
@@ -448,12 +464,16 @@ main() {
                 cleanup_container
                 ;;
             5)
+                # Просмотр логов
+                view_logs
+                ;;
+            6)
                 # Выход
                 print_status "Выход из программы"
                 exit 0
                 ;;
             *)
-                print_error "Неверный выбор. Пожалуйста, введите число от 1 до 5."
+                print_error "Неверный выбор. Пожалуйста, введите число от 1 до 6."
                 ;;
         esac
     done
