@@ -5,4 +5,5 @@ class AddAccountStates(StatesGroup):
     enter_proxy = State()
     enter_phone = State()
     enter_code = State()
+    enter_label = State()
 

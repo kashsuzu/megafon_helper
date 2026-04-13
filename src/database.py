@@ -38,7 +38,8 @@ class Database:
                                 proxies TEXT DEFAULT '',
                                 last_activate_datetime INTEGER DEFAULT 1,
                                 pin TEXT DEFAULT '0000',
-                                formated_number TEXT DEFAULT ''
+                                formated_number TEXT DEFAULT '',
+                                label TEXT DEFAULT ''
                              )""")
             await db.commit()
             logger.info("Таблицы успешно созданы")
@@ -78,7 +79,8 @@ class Database:
                     proxies = ?,
                     last_activate_datetime = ?,
                     number = ?,
-                    formated_number= ?
+                    formated_number= ?,
+                    label = ?
                 WHERE account_id = ?
                 """,
                 (
@@ -89,6 +91,7 @@ class Database:
                     account_data.last_activate_datetime,
                     account_data.number,
                     account_data.formated_number,
+                    account_data.label,
                     account_data.account_id,
                 ),
             )

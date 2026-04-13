@@ -19,7 +19,7 @@ from src.megafon.exceptions import MegafonAPIError, NeedCheckSession
 from .account import MegafonAccount
 
 
-def retrier(max_attempts: int = 3):
+def retrier(max_attempts: int = 5):
     """
     Декоратор для повторных попыток выполнения запроса при ошибках.
 
@@ -33,14 +33,15 @@ def retrier(max_attempts: int = 3):
                     return await func(*args, **kwargs)
                 except (ClientError, asyncio.TimeoutError) as err:
                     logger.warning(
-                        f"⚠️ Попытка {attempt}/{max_attempts} завершилась ошибкой: {err}"
+                        f"⚠️ Попытка {attempt}/{max_attempts} завершилась ошибкой:"
+                        f"{err.__class__.__name__}/{err}"
                     )
 
                     if attempt == max_attempts:
                         logger.error(
-                            "❌ Превышено максимальное количество попыток запроса"
+                            "❌ Превышено максимальное количество попыток выполнить действие"
                         )
-                    raise err
+                        raise err
 
         return inner
 

@@ -14,7 +14,7 @@ from src.bot.filters.callback_data import (
     MenuCallbackData,
 )
 from src.bot.fsm.add_account import AddAccountStates
-from src.bot.fsm.change_proxy import ChangeProxyStates
+from src.bot.fsm.change_proxy import ChangeProxyStates, ChangeLabelStates, ChangeLabelStates
 from src.bot.keyboard.inline import InlineKeyboard
 from src.bot.utils import check_proxy_availability
 from src.database import Database
@@ -62,6 +62,28 @@ async def back_to_main_menu(
     )
 
 
+@router.callback_query(
+    AddAccountCallbackData.filter(F.action == "skip_enter_label")
+)
+async def skip_enter_label(
+    callback: CallbackQuery,
+    keyboard: InlineKeyboard,
+    state: FSMContext,
+    state_data: dict
+):
+    megafon_manager: MegafonManager = state_data["megafon_manager"]
+    await megafon_manager.account.save_account_data_to_db()
+    keyboard.remove_megafon_managers_by_account_id(
+        megafon_manager.account.data.account_id
+    )
+    keyboard.megafon_managers.append(megafon_manager)
+    await callback.message.answer(
+        html.bold("✅ Аккаунт успешно добавлен!"),
+        reply_markup=keyboard.menu(),
+    )
+    await state.clear()
+
+
 # @router.callback_query(
 #     AccountsCallbackData.filter(F.action == "back_to_accounts")
 # )
@@ -98,11 +120,16 @@ async def show_info(
         )
     )
 
+    label_str = ""
+    if megafon_manager.account.data.label:
+        label_str = html.bold(f"\n📌 Метка: ") + megafon_manager.account.data.label + "\n"
+
     text = (
         html.bold(
             f"#{megafon_manager.account.data.account_id} | "
             + f"{megafon_manager.account.data.formated_number}\n"
         )
+        + label_str
         + html.bold(f"💰 Баланс: {balance} ₽\n\n")
         + activated_numbers_str
     )
@@ -569,6 +596,28 @@ async def resend_otp(
         text=html.bold("Введите код отправленный в СМС:"),
         reply_markup=keyboard.otp,
     )
+
+
+@router.callback_query(AccountsCallbackData.filter(F.action == "change_label"))
+async def change_label_on_account(
+    callback: CallbackQuery,
+    callback_data: AccountsCallbackData,
+    megafon_managers_dict: dict[int, MegafonManager],
+    keyboard: InlineKeyboard,
+    state: FSMContext,
+):
+    megafon_manager = megafon_managers_dict[callback_data.account_id]
+    current_label = megafon_manager.account.data.label or "не установлена"
+    await callback.message.edit_text(
+        text=(
+            html.bold("🔧 Ваша текущая метка:\n")
+            + html.code(f"{current_label}\n\n")
+            + html.bold("📝 Отправьте новую метку или нажмите «Отмена»")
+        ),
+        reply_markup=keyboard.cancel_change_label(callback_data.account_id),
+    )
+    await state.set_state(ChangeLabelStates.enter_label)
+    await state.update_data(megafon_manager=megafon_manager)
 
 
 # async def _show_account_info(

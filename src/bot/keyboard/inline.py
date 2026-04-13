@@ -66,7 +66,36 @@ class InlineKeyboard:
         builder.adjust(1)
         return builder.as_markup()
 
+    @property
+    def skip_enter_label(self):
+        builder = InlineKeyboardBuilder()
+        builder.button(
+            text="Пропустить",
+            style="primary",
+            callback_data=AddAccountCallbackData(action="skip_enter_label").pack(),
+        )
+        builder.button(
+            text="Отмена",
+            style="danger",
+            callback_data=MenuCallbackData(action="back_to_main_menu").pack(),
+        )
+        builder.adjust(1)
+        return builder.as_markup()
+
+
     def cancel_change_proxy(self, account_id: int) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(
+            text="Отмена",
+            style="danger",
+            callback_data=AccountsCallbackData(
+                action="show_info", account_id=account_id
+            ).pack(),
+        )
+        builder.adjust(1)
+        return builder.as_markup()
+
+    def cancel_change_label(self, account_id: int) -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
         builder.button(
             text="Отмена",
@@ -177,19 +206,25 @@ class InlineKeyboard:
                 action="show_info", account_id=account_id
             ).pack(),
         )
-        builder.button(
-            text="Назад",
-            callback_data=MenuCallbackData(
-                action="back_to_main_menu", page=page
-            ).pack(),
-        )
+
         builder.button(
             text="Изменить прокси",
             callback_data=AccountsCallbackData(
                 action="change_proxy", account_id=account_id
             ).pack(),
         )
-
+        builder.button(
+            text="Изменить метку",
+            callback_data=AccountsCallbackData(
+                action="change_label", account_id=account_id
+            ).pack(),
+        )
+        builder.button(
+            text="Назад",
+            callback_data=MenuCallbackData(
+                action="back_to_main_menu", page=page
+            ).pack(),
+        )
         builder.adjust(2)
         return builder.as_markup()
 

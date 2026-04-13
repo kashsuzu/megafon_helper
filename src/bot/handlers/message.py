@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from src.bot.fsm.add_account import AddAccountStates
-from src.bot.fsm.change_proxy import ChangeProxyStates
+from src.bot.fsm.change_proxy import ChangeProxyStates, ChangeLabelStates
 from src.bot.keyboard.inline import InlineKeyboard
 from src.bot.utils import format_phone_number, proxy_format_is_valid
 from src.megafon.exceptions import IncorrectOTPCode, MegafonAPIError
@@ -90,6 +90,32 @@ async def proccess_proxy(
     await message.answer(
         text,
         reply_markup=reply_markup,
+    )
+
+
+@router.message(StateFilter(ChangeLabelStates.enter_label))
+async def process_change_label(
+    message: Message,
+    state: FSMContext,
+    keyboard: InlineKeyboard,
+    state_data: dict,
+):
+    label = (message.text or "").strip()
+    megafon_manager: MegafonManager = state_data["megafon_manager"]
+    megafon_manager.account.data.label = label
+    await megafon_manager.account.save_account_data_to_db()
+    text = html.bold(
+        f"#{megafon_manager.account.data.account_id} | "
+        f"{megafon_manager.account.data.formated_number}\n\n"
+        f"Метка успешно изменена на\n"
+    ) + html.blockquote(label if label else "не установлена")
+
+    await state.clear()
+    await message.answer(
+        text=text,
+        reply_markup=keyboard.account_actions(
+            megafon_manager.account.data.account_id
+        ),
     )
 
 
@@ -176,12 +202,30 @@ async def process_code(
     megafon_manager.account.data.formated_number = format_phone_number(
         megafon_manager.account.data.number
     )
+    await state.update_data(megafon_manager=megafon_manager)
+    await message.edit_text(
+        html.bold("📝 Введите метку для аккаунта или пропустите:"),
+        reply_markup=keyboard.skip_enter_label,
+    )
+    await state.set_state(AddAccountStates.enter_label)
+
+
+@router.message(StateFilter(AddAccountStates.enter_label))
+async def process_label(
+    message: Message,
+    state: FSMContext,
+    keyboard: InlineKeyboard,
+    state_data: dict,
+):
+    label = (message.text or "").strip()
+    megafon_manager: MegafonManager = state_data["megafon_manager"]
+    megafon_manager.account.data.label = label
     await megafon_manager.account.save_account_data_to_db()
     keyboard.remove_megafon_managers_by_account_id(
         megafon_manager.account.data.account_id
     )
     keyboard.megafon_managers.append(megafon_manager)
-    await message.edit_text(
+    await message.answer(
         html.bold("✅ Аккаунт успешно добавлен!"),
         reply_markup=keyboard.menu(),
     )

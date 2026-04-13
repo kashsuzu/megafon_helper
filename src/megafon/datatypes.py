@@ -139,6 +139,7 @@ class MegafonAccountData:
     )
     pin: str = ""
     formated_number: str = ""
+    label: str = ""
 
     def __post_init__(self):
         """
