@@ -6,6 +6,7 @@
 управлением cookies и заголовками.
 """
 import asyncio
+import json
 from typing import NoReturn
 
 from aiohttp import ClientError, ClientResponse, ClientSession, ClientTimeout
@@ -14,7 +15,7 @@ from loguru import logger
 
 from src.megafon.config import BASE_AUTH_HEADERS, DEFAULT_DELAY
 from src.megafon.datatypes import Response
-from src.megafon.exceptions import MegafonAPIError, NeedCheckSession
+from src.megafon.exceptions import MegafonAPIError, NeedCheckSession, NeedRetry
 
 from .account import MegafonAccount
 
@@ -31,7 +32,7 @@ def retrier(max_attempts: int = 5):
             for attempt in range(1, max_attempts + 1):
                 try:
                     return await func(*args, **kwargs)
-                except (ClientError, asyncio.TimeoutError) as err:
+                except (ClientError, asyncio.TimeoutError, NeedRetry) as err:
                     logger.warning(
                         f"⚠️ Попытка {attempt}/{max_attempts} завершилась ошибкой:"
                         f"{err.__class__.__name__}/{err}"
@@ -113,6 +114,7 @@ class MegafonHTTPClient:
         check_session_on_401: bool = True,
         raise_err_on_401: bool = True,
         retry_on_403: bool = True,
+        retry_on_bad_status: bool = False,
     ) -> None | NoReturn:
         """
         Проверяет статус ответа и обрабатывает ошибки.
@@ -127,6 +129,9 @@ class MegafonHTTPClient:
         """
         status = response.status
         logger.debug(f"📊 Статус ответа: {status}")
+
+        if retry_on_bad_status and status != 200:
+            raise NeedRetry(f'Нужна повторная попытка отправки запроса. Статус ответа: {status}')
 
         match status:
             case 200:
@@ -143,7 +148,7 @@ class MegafonHTTPClient:
                 logger.debug("⏭️ Получен 401 статус (проигнорирован)")
             case 403:
                 logger.warning("⚠️ Получен 403 статус - повторная попытка")
-                raise ClientError(
+                raise NeedRetry(
                     "Повторная попытка отправки запроса из за 403 статуса"
                 )
             case other:
@@ -166,6 +171,7 @@ class MegafonHTTPClient:
         raise_err_on_401: bool = True,
         exclude_cookies: list[str] = [],
         allowed_cookies: list[str] = [],
+        retry_on_bad_status: bool = False,
         **request_kwargs,
     ) -> NoReturn | Response:
         """
@@ -213,6 +219,7 @@ class MegafonHTTPClient:
                     response,
                     check_session_on_401,
                     raise_err_on_401,
+                    retry_on_bad_status=retry_on_bad_status,
                 )
 
                 response = await Response.init(response)

@@ -22,7 +22,7 @@ from src.megafon.account import MegafonAccount
 from src.megafon.datatypes import MegafonAccountData
 from src.megafon.exceptions import MegafonAPIError, ServiceAvailabilityError
 from src.megafon.manager import MegafonManager
-
+from loguru import logger
 router = Router()
 
 
@@ -330,7 +330,7 @@ async def add_account(
 
 
 @router.callback_query(
-    MenuCallbackData.filter(F.action == "activate_on_all_accounts")
+    AccountsCallbackData.filter(F.action == "activate_on_all_accounts")
 )
 async def activate_service_on_all_accounts(
     callback: CallbackQuery,
@@ -350,16 +350,9 @@ async def activate_service_on_all_accounts(
 
     for megafon_manager in megafon_managers:
         try:
-            await megafon_manager.activate_numbers()
-
-            success_activation_amount += 1
-            success_activated_accounts.append(
-                html.bold(
-                    f"#{megafon_manager.account.data.account_id} | "
-                    f"{megafon_manager.account.data.formated_number}"
-                )
-            )
-        except (ServiceAvailabilityError, MegafonAPIError) as err:
+            with logger.contextualize(account_id=megafon_manager.account.data.account_id):
+                await megafon_manager.activate_numbers()
+        except MegafonAPIError as err:
             appeared_error_list.append(
                 html.bold(
                     f"#{megafon_manager.account.data.account_id} | "
@@ -367,6 +360,14 @@ async def activate_service_on_all_accounts(
                 )
                 + f"{err}"
             )
+
+        success_activation_amount += 1
+        success_activated_accounts.append(
+            html.bold(
+                f"#{megafon_manager.account.data.account_id} | "
+                f"{megafon_manager.account.data.formated_number}"
+            )
+        )
         try:
             await callback.message.edit_text(
                 text=html.bold(
@@ -395,7 +396,7 @@ async def activate_service_on_all_accounts(
 
 
 @router.callback_query(
-    MenuCallbackData.filter(F.action == "deactivate_on_all_accounts")
+    AccountsCallbackData.filter(F.action == "deactivate_on_all_accounts")
 )
 async def deactivate_service_on_all_accounts(
     callback: CallbackQuery,
@@ -414,20 +415,9 @@ async def deactivate_service_on_all_accounts(
 
     for megafon_manager in megafon_managers:
         try:
-            await megafon_manager.delete_all_numbers()
-            megafon_manager.account.data.last_activate_datetime = (
-                datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-            )
-            await megafon_manager.account.save_account_data_to_db()
-            success_deactivation_amount += 1
-            success_deactivation_accounts.append(
-                html.bold(
-                    f"#{megafon_manager.account.data.account_id} | "
-                    f"{megafon_manager.account.data.formated_number}"
-                )
-            )
-
-        except (ServiceAvailabilityError, MegafonAPIError) as err:
+            with logger.contextualize(account_id=megafon_manager.account.data.account_id):
+                await megafon_manager.delete_all_numbers()
+        except MegafonAPIError as err:
             appeared_error_list.append(
                 html.bold(
                     f"#{megafon_manager.account.data.account_id} | "
@@ -435,6 +425,18 @@ async def deactivate_service_on_all_accounts(
                 )
                 + f"{err}"
             )
+
+        megafon_manager.account.data.last_activate_datetime = (
+            datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        )
+        await megafon_manager.account.save_account_data_to_db()
+        success_deactivation_amount += 1
+        success_deactivation_accounts.append(
+            html.bold(
+                f"#{megafon_manager.account.data.account_id} | "
+                f"{megafon_manager.account.data.formated_number}"
+            )
+        )
 
         try:
             await callback.message.edit_text(

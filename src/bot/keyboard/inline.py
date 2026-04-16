@@ -36,15 +36,19 @@ class InlineKeyboard:
         builder.button(
             text="Подключить везде",
             style="success",
-            callback_data=MenuCallbackData(
-                action="activate_on_all_accounts"
+            callback_data=AccountsCallbackData(
+                action="activate_on_all_accounts",
+                page=page,
+                max_page=self.max_page,
             ).pack(),
         )
         builder.button(
             text="Отключить везде",
             style="danger",
-            callback_data=MenuCallbackData(
-                action="deactivate_on_all_accounts"
+            callback_data=AccountsCallbackData(
+                action="deactivate_on_all_accounts",
+                page=page,
+                max_page=self.max_page,
             ).pack(),
         )
         megafon_accounts_colum_size = (

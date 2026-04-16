@@ -157,15 +157,8 @@ class MegafonAuthAPI(MegafonHTTPClient):
             use_strict_headers=True,
             check_session_on_401=False,
             allowed_cookies=AllowedCookies.PUSH_PIN.value,
+            retry_on_bad_status=True,
         )
-
-        if response.status != 200:
-            logger.error(
-                f"❌ Не удалось отправить PIN-код (статус {response.status})"
-            )
-            raise MegafonAPIError(
-                f"Не удалось отправить биометрию из за плохого статуса. Response: {response.json}"
-            )
 
         await self._check_authorization_need(response)
         await self.account.update_tokens(response)

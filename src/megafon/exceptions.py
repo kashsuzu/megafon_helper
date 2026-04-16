@@ -54,3 +54,7 @@ class MegafonAuthAPIError(BaseError):
 class IncorrectOTPCode(MegafonAuthAPIError):
     """Исключение при вводе неверного OTP-кода."""
     pass
+
+class NeedRetry(MegafonAPIError):
+    """Исключение для повторной отправки запроса."""
+    pass
