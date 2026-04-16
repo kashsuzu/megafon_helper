@@ -157,7 +157,6 @@ class MegafonAuthAPI(MegafonHTTPClient):
             use_strict_headers=True,
             check_session_on_401=False,
             allowed_cookies=AllowedCookies.PUSH_PIN.value,
-            retry_on_bad_status=True,
         )
 
         await self._check_authorization_need(response)
