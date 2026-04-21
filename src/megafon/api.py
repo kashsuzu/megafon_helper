@@ -311,7 +311,7 @@ class MegafonAPI(MegafonAuthAPI):
         logger.info(f"✅ Успешно подключено {len(activated_numbers)} номеров")
         return activated_numbers
 
-    async def delete_all_numbers(self):
+    async def delete_all_numbers(self) -> int:
         """
         Отключает все подключенные дополнительные номера.
 
@@ -319,12 +319,13 @@ class MegafonAPI(MegafonAuthAPI):
         Продолжает работу даже при ошибках отключения отдельных номеров.
         :raises MegafonAPIError: Если не удалось получить список номеров или отключить один из них
         """
+        deleted_numbers_amount = 0
         logger.info("🗑️ Начало отключения всех номеров")
         try:
             activated_numbers = await self.get_activated_numbers()
             if not activated_numbers:
                 logger.info("ℹ️ Нет номеров для отключения")
-                return
+                return deleted_numbers_amount
 
             logger.info(
                 f"📋 Найдено {len(activated_numbers)} номеров для отключения"
@@ -338,6 +339,7 @@ class MegafonAPI(MegafonAuthAPI):
         for number_info in activated_numbers:
             try:
                 await self.delete_number(number_info, delay=2)
+                deleted_numbers_amount+=1
             except MegafonAPIError as err:
                 logger.error(
                     f"❌ Не удалось отключить номер {number_info.number}: {err}"
@@ -346,4 +348,5 @@ class MegafonAPI(MegafonAuthAPI):
                     f"Не удалось отключить номер {number_info.number} из за {err}"
                 )
 
-        logger.info("✅ Процесс отключения номеров завершен")
+        logger.info(f"✅ Процесс отключения номеров завершен(отключено {deleted_numbers_amount} номеров)")
+        return deleted_numbers_amount

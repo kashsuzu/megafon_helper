@@ -69,7 +69,16 @@ class InlineKeyboard:
         )
         builder.adjust(1)
         return builder.as_markup()
-
+    @property
+    def back(self) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(
+            text="Назад",
+            callback_data=MenuCallbackData(action="back_to_main_menu").pack(),
+        )
+        builder.adjust(1)
+        return builder.as_markup()
+    
     @property
     def skip_enter_label(self):
         builder = InlineKeyboardBuilder()
@@ -249,6 +258,7 @@ class InlineKeyboard:
                     callback_data=AccountsCallbackData(
                         action="show_info",
                         account_id=megafon_manager.account.data.account_id,
+                        page=page,
                     ).pack(),
                 )
             )

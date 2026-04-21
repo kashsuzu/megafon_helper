@@ -110,13 +110,14 @@ async def show_info(
     activated_numbers = [
         html.code(number.number) for number in activated_numbers
     ]
+    service_availabilty_datetime =datetime.datetime.strptime(megafon_manager.account.data.last_activate_datetime, "%d.%m.%Y %H:%M") + datetime.timedelta(hours=24)
     activated_numbers_str = (
         (html.bold("Активные номера:\n") + "\n".join(activated_numbers))
         if activated_numbers
         else (
             html.bold("📵 Активных номеров нет\n")
-            + html.bold("Дата последней деактивации:\n")
-            + f"{megafon_manager.account.data.last_activate_datetime} по МСК"
+            + html.bold('Дата возобновления услуги:\n')
+            + f"{service_availabilty_datetime.strftime('%d.%m.%Y %H:%M')} по МСК\n"
         )
     )
 
@@ -190,8 +191,9 @@ async def deactivate_service_on_account(
     megafon_manager = megafon_managers_dict[callback_data.account_id]
 
     try:
-        await megafon_manager.delete_all_numbers()
-        megafon_manager.account.data.last_activate_datetime = (
+        deleted_numbers_amount = await megafon_manager.delete_all_numbers()
+        if deleted_numbers_amount:
+            megafon_manager.account.data.last_activate_datetime = (
             datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
         )
         await megafon_manager.account.save_account_data_to_db()
@@ -373,7 +375,8 @@ async def activate_service_on_all_accounts(
                 text=html.bold(
                     "Номера успешно активированны на "
                     f"{success_activation_amount}/{len(megafon_managers)} аккаунтов\n"
-                    f"Продолжаю активацию..."
+                    f"Обработал: {megafon_manager.account.data.account_id} | "
+                    f"{megafon_manager.account.data.formated_number}"
                 )
             )
         except TelegramBadRequest:
@@ -389,10 +392,10 @@ async def activate_service_on_all_accounts(
         + "\n".join(success_activated_accounts)
         + "\n\n"
         + "⏱️ Номера появятся на аккаунтах в течение 3 минут\n\n"
-        + html.bold("❌ Ошибки возникшие при подключении:\n")
+        + html.bold(f"{'❌ Ошибки возникшие при подключении:\n' if appeared_error_list else ''}") 
         + html.blockquote(appeared_errors_str)
     )
-    await callback.message.edit_text(text, reply_markup=keyboard.menu())
+    await callback.message.edit_text(text, reply_markup=keyboard.back)
 
 
 @router.callback_query(
@@ -406,17 +409,17 @@ async def deactivate_service_on_all_accounts(
     success_deactivation_amount = 0
     appeared_error_list = []
     success_deactivation_accounts: list[str] = []
-    await callback.message.edit_text(
-        html.bold(
+    await callback.message.edit_text(text=html.bold(
             "🔄 Начинаю отключение номеров на всех аккаунтах.\n"
             + "Это может занять некоторое время..."
         )
     )
 
     for megafon_manager in megafon_managers:
+        deleted_numbers_amount = 0
         try:
             with logger.contextualize(account_id=megafon_manager.account.data.account_id):
-                await megafon_manager.delete_all_numbers()
+                deleted_numbers_amount = await megafon_manager.delete_all_numbers()
         except MegafonAPIError as err:
             appeared_error_list.append(
                 html.bold(
@@ -425,25 +428,26 @@ async def deactivate_service_on_all_accounts(
                 )
                 + f"{err}"
             )
-
-        megafon_manager.account.data.last_activate_datetime = (
-            datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-        )
-        await megafon_manager.account.save_account_data_to_db()
-        success_deactivation_amount += 1
-        success_deactivation_accounts.append(
-            html.bold(
-                f"#{megafon_manager.account.data.account_id} | "
-                f"{megafon_manager.account.data.formated_number}"
+        if deleted_numbers_amount:
+            megafon_manager.account.data.last_activate_datetime = (
+                datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
             )
-        )
+            await megafon_manager.account.save_account_data_to_db()
+            success_deactivation_amount += 1
+            success_deactivation_accounts.append(
+                html.bold(
+                    f"#{megafon_manager.account.data.account_id} | "
+                    f"{megafon_manager.account.data.formated_number}"
+                )
+            )
 
         try:
             await callback.message.edit_text(
                 text=html.bold(
                     f"Номера успешно деактивированны на "
                     f"{success_deactivation_amount} из {len(megafon_managers)} аккаунтов\n"
-                    f"Продолжаю деактивацию..."
+                    f"Обработал: {megafon_manager.account.data.account_id} | "
+                    f"{megafon_manager.account.data.formated_number}"
                 )
             )
         except TelegramBadRequest:
@@ -457,12 +461,14 @@ async def deactivate_service_on_all_accounts(
             "Успешно деактивированные аккаунты:\n"
         )
         + "\n".join(success_deactivation_accounts)
-        + "\n\n"
-        + "⏱️ Номера отключатся на аккаунтах в течение 3 минут\n\n"
-        + html.bold("❌ Ошибки возникшие при отключении:\n")
+        + "\n"
+        + "⏱️ Номера отключатся на аккаунтах в течение 3 минут\n"
+        + "Если в процессе отключения ошибок не возникло, но успешно отключены "
+        + "не все аккануты, значит на них нету активных номеров"
+        + html.bold(f"{'❌ Ошибки возникшие при отключении:\n' if appeared_error_list else ''}") 
         + html.blockquote(appeared_errors_str)
     )
-    await callback.message.edit_text(text, reply_markup=keyboard.menu())
+    await callback.message.edit_text(text, reply_markup=keyboard.back)
 
 
 @router.callback_query(
